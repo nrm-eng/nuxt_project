@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 
-// Тип для даних
 type Payment = {
   id: string
   date: string
@@ -10,7 +9,6 @@ type Payment = {
   amount: number
 }
 
-// Початкові дані
 const data = ref<Payment[]>([
   { id: '4600', date: '2024-03-11T15:30:00', status: 'paid', email: 'james@example.com', amount: 594 },
   { id: '4599', date: '2024-03-11T10:10:00', status: 'failed', email: 'mia@example.com', amount: 276 },
