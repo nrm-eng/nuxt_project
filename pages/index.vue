@@ -1,64 +1,65 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 
-type Payment = {
-  id: string
-  date: string
-  status: 'paid' | 'failed' | 'refunded'
-  email: string
-  amount: number
+interface Product {
+  id: number
+  title: string
+  description: string
+  price: number
+  rating: number
+  brand: string
+  category: string
+  thumbnail: string
 }
 
-const data = ref<Payment[]>([
-  { id: '4600', date: '2024-03-11T15:30:00', status: 'paid', email: 'james@example.com', amount: 594 },
-  { id: '4599', date: '2024-03-11T10:10:00', status: 'failed', email: 'mia@example.com', amount: 276 },
-  { id: '4598', date: '2024-03-11T08:50:00', status: 'refunded', email: 'william@example.com', amount: 315 },
-  { id: '4597', date: '2024-03-10T19:45:00', status: 'paid', email: 'emma@example.com', amount: 529 },
-  { id: '4596', date: '2024-03-10T15:55:00', status: 'paid', email: 'ethan@example.com', amount: 639 },
-  { id: '4595', date: '2024-03-09T12:20:00', status: 'failed', email: 'olivia@example.com', amount: 412 },
-  { id: '4594', date: '2024-03-09T09:15:00', status: 'paid', email: 'liam@example.com', amount: 750 },
-  { id: '4593', date: '2024-03-08T17:40:00', status: 'refunded', email: 'sophia@example.com', amount: 199 },
-  { id: '4592', date: '2024-03-08T14:25:00', status: 'paid', email: 'noah@example.com', amount: 820 },
-  { id: '4591', date: '2024-03-07T20:10:00', status: 'failed', email: 'ava@example.com', amount: 345 },
-  { id: '4590', date: '2024-03-07T11:50:00', status: 'paid', email: 'mason@example.com', amount: 480 },
-  { id: '4589', date: '2024-03-06T16:30:00', status: 'refunded', email: 'isabella@example.com', amount: 265 },
-  { id: '4588', date: '2024-03-06T10:00:00', status: 'paid', email: 'jacob@example.com', amount: 910 },
-  { id: '4587', date: '2024-03-05T18:45:00', status: 'failed', email: 'charlotte@example.com', amount: 123 },
-  { id: '4586', date: '2024-03-05T13:20:00', status: 'paid', email: 'elijah@example.com', amount: 672 },
-  { id: '4585', date: '2024-03-04T22:15:00', status: 'refunded', email: 'amelia@example.com', amount: 388 },
-  { id: '4584', date: '2024-03-04T09:30:00', status: 'paid', email: 'benjamin@example.com', amount: 555 },
-  { id: '4583', date: '2024-03-03T15:10:00', status: 'failed', email: 'harper@example.com', amount: 290 },
-  { id: '4582', date: '2024-03-03T12:55:00', status: 'paid', email: 'lucas@example.com', amount: 700 },
-  { id: '4581', date: '2024-03-02T19:25:00', status: 'refunded', email: 'evelyn@example.com', amount: 432 },
-])
+const { data: products, error } = await useFetch<{ products: Product[] }>('https://dummyjson.com/products', {
+  query: { limit: 100 }
+})
 
-const columns: TableColumn<Payment>[] = [
-  { accessorKey: 'id', header: '#', enableSorting: true },
+const columns: TableColumn<Product>[] = [
+  { accessorKey: 'title', header: 'Назва', enableSorting: true },
+  { accessorKey: 'description', header: 'Опис', enableSorting: true },
   {
-    accessorKey: 'date',
-    header: 'Date',
+    accessorKey: 'price',
+    header: 'Ціна',
     enableSorting: true,
-    cell: ({ row }) => new Date(row.getValue('date')).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+    cell: ({ row }) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(row.getValue('price'))
   },
-  { accessorKey: 'status', header: 'Status', enableSorting: true },
-  { accessorKey: 'email', header: 'Email', enableSorting: true },
   {
-    accessorKey: 'amount',
-    header: 'Amount',
+    accessorKey: 'rating',
+    header: 'Оцінка',
     enableSorting: true,
-    cell: ({ row }) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(row.getValue('amount'))
+    cell: ({ row }) => {
+      const rating = row.getValue('rating') as number
+      return h('span', {
+        style: rating < 4.5 ? 'color: red;' : 'color: green;'
+      }, rating.toFixed(1))
+    }
   },
+  { accessorKey: 'brand', header: 'Бренд', enableSorting: true },
+  { accessorKey: 'category', header: 'Категорія', enableSorting: true },
+  {
+    accessorKey: 'thumbnail',
+    header: 'Фото',
+    cell: ({ row }) => h('img', {
+      src: row.getValue('thumbnail'),
+      alt: row.getValue('title'),
+      style: 'width: 100px; height: 100px; object-fit: cover;'
+    })
+  }
 ]
 
 const pageIndex = ref(0)
 const pageSize = ref(10)
-
 const searchQuery = ref('')
-
 const sort = ref<{ key: string; direction: 'asc' | 'desc' } | null>(null)
 
+watch(searchQuery, () => {
+  pageIndex.value = 0
+})
+
 const filteredData = computed(() => {
-  let result = [...data.value]
+  let result = products.value?.products || []
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
@@ -68,9 +69,9 @@ const filteredData = computed(() => {
   }
 
   if (sort.value) {
-    result.sort((a, b) => {
-      const aValue = a[sort.value!.key as keyof Payment]
-      const bValue = b[sort.value!.key as keyof Payment]
+    result = [...result].sort((a, b) => {
+      const aValue = a[sort.value!.key as keyof Product]
+      const bValue = b[sort.value!.key as keyof Product]
       if (aValue < bValue) return sort.value!.direction === 'asc' ? -1 : 1
       if (aValue > bValue) return sort.value!.direction === 'asc' ? 1 : -1
       return 0
@@ -79,7 +80,6 @@ const filteredData = computed(() => {
 
   return result
 })
-
 
 const paginatedData = computed(() => {
   const start = pageIndex.value * pageSize.value
@@ -100,30 +100,57 @@ const onSort = (key: string) => {
   pageIndex.value = 0
 }
 
+const selectRandomProduct = () => {
+  const allProducts = products.value?.products || []
+  if (allProducts.length > 0) {
+    const randomIndex = Math.floor(Math.random() * allProducts.length)
+    searchQuery.value = allProducts[randomIndex].title
+  }
+}
 </script>
 
 <template>
   <div class="space-y-4">
-    <UInput
-        v-model="searchQuery"
-        placeholder="Search..."
-        icon="i-lucide-search"
-        class="max-w-md"
-    />
+    <div class="search-wrapper">
+      <UInput
+          v-model="searchQuery"
+          placeholder="Пошук за назвою..."
+          class="max-w-md"
+      />
+      <div class="button-group">
+        <button class="clear-button" @click="searchQuery = ''">
+          <i class="i-lucide-refresh-cw"></i>
+          Очистити
+        </button>
+      </div>
+    </div>
 
     <UTable
-        :columns="columns"
+        ref="table"
         :data="paginatedData"
-        :sort="{ key: sort?.key, direction: sort?.direction }"
+        :columns="columns"
+        sticky
+        class="table h-96"
         @sort="onSort"
     />
 
-    <UPagination
-        v-model="pageIndex"
-        :page-count="pageCount"
-        :total="filteredData.length"
-        show-first
-        show-last
-    />
+    <div v-if="error" class="text-red-500">
+      Error loading products: {{ error.message }}
+    </div>
+    <div class="pagination">
+      <button
+          :disabled="pageIndex === 0"
+          @click="pageIndex = pageIndex - 1"
+      >
+        Попередня
+      </button>
+      <span>Сторінка {{ pageIndex + 1 }} з {{ pageCount }}</span>
+      <button
+          :disabled="pageIndex + 1 === pageCount"
+          @click="pageIndex = pageIndex + 1"
+      >
+        Наступна
+      </button>
+    </div>
   </div>
 </template>
