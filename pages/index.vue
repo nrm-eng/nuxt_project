@@ -80,6 +80,7 @@ const filteredData = computed(() => {
   return result
 })
 
+
 const paginatedData = computed(() => {
   const start = pageIndex.value * pageSize.value
   return filteredData.value.slice(start, start + pageSize.value)
